@@ -1,0 +1,5 @@
+data/
+runs/
+__pycache__/
+.ipynb_checkpoints/
+models_sudoku_ver1/
