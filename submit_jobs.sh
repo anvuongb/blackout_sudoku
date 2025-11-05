@@ -3,7 +3,7 @@
 #SBATCH --error=logs/job_%j.err
 #SBATCH --partition=dgxh
 #SBATCH --nodes=1
-##SBATCH --nodelist=dgxh-1,dgxh-2,dgxh-3,dgxh-4
+#SBATCH --nodelist=dgxh-2,dgxh-3,dgxh-4
 #SBATCH --cpus-per-task=4
 #SBATCH --gpus-per-node=1
 #SBATCH --ntasks-per-node=1
@@ -17,10 +17,11 @@ export PYTHONFAULTHANDLER=1
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
 VERSION=1
+DATA_DIR='/nfs/stak/users/vuonga2/hpc-share/datasets/sudoku'
 
 SCHEDULE="blackout"
 LOSS="blackout"
-BATCH_SIZE=16
+BATCH_SIZE=24
 T_END=15
 T=1000
 LR=3e-4
@@ -36,7 +37,8 @@ NORMALIZE=0
 WARMUP=1
 WANDB=0
 
-/nfs/hpc/share/vuonga2/conda-env/diff/bin/python bdsd_train.py \
+/nfs/hpc/share/vuonga2/conda-env/diff/bin/python train.py \
+  --data_dir $DATA_DIR \
   --load_from $LOAD_FROM \
   --version $VERSION \
   --normalize $NORMALIZE \

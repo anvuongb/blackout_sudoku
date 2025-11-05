@@ -85,6 +85,10 @@ if __name__ == '__main__':
     model = SRDModel(in_ch=hparams['in_ch'])
     torchinfo.summary(model)
 
+    # enable some optimization
+    #torch.set_float32_matmul_precision('high')
+    model.compile(mode="default")
+
     # init log writer
     log_path = f"_models_sudoku-ver{version}"
 

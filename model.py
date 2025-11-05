@@ -28,19 +28,9 @@ class LSRDModel(L.LightningModule):
         self.xhparams = hparams
         self.xdevice = hparams['device']
         
-        self.ema = EMA(
-                        self.model,
-                        beta=0.9999,            # Exponential moving average factor
-                        update_after_step=100,  # Start updating after 100 steps
-                        update_every=10,        # Update EMA every 10 steps
-                    )
-
         if hparams['wandb']:
             # tensorboard hangs when save hyperparams?
             self.save_hyperparameters(hparams)
-
-    def on_before_zero_grad(self, optimizer):
-        self.ema.update()
     
     def configure_optimizers(self):
         # init optimizer
