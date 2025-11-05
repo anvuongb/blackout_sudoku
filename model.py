@@ -98,12 +98,12 @@ class SRDModel(torch.nn.Module):
             'progressive_input':'residual',
             'combine_method':'sum',
             'init_scale':1e-5, # original ncspp used 1e-10 
-            'num_res_blocks':2
+            'num_res_blocks':4
         }
 
-        config['ch_mult'] = [2, 2]
+        config['ch_mult'] = [1, 2, 2, 2]
 
-        config['nf'] = 32
+        config['nf'] = 128
         config['dropout'] = 0.1
         from score_models import ScoreModel, NCSNpp
         print('model config')
