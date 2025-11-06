@@ -48,9 +48,9 @@ class LSRDModel(L.LightningModule):
         return {"optimizer": optimizer, "lr_scheduler": {"scheduler": scheduler, "monitor": "Loss /train", "interval": "step", "frequency":1, 'reduce_on_plateau': False}}
     
     def training_step(self, batch, batch_idx):
-        xt, rt, tk, wk = batch
+        xt, rt, tk, wk, mk = batch
         outputs = self.model(tk, xt) # don't normalize tk
-        loss = calc_loss(outputs, rt, wk, self.xhparams['lf'], self.xhparams['disable_w'])
+        loss = calc_loss(outputs*mk, rt*mk, wk, self.xhparams['lf'], self.xhparams['disable_w']) # mask to only calculate loss on unknown vals
 
         self.log('Loss /train', loss, prog_bar=True, sync_dist=True)
         self.log('lr', self.lr_schedulers().get_last_lr()[0], prog_bar=False)
@@ -66,10 +66,10 @@ class LSRDModel(L.LightningModule):
         return loss
     
     def validation_step(self, batch, batch_idx):
-        xt, rt, tk, wk = batch
+        xt, rt, tk, wk, mk = batch
         with torch.no_grad():
             outputs = self.model(tk, xt) # don't normalize tk
-            loss = calc_loss(outputs, rt, wk, self.xhparams['lf'], self.xhparams['disable_w'])
+            loss = calc_loss(outputs*mk, rt*mk, wk, self.xhparams['lf'], self.xhparams['disable_w'])
 
             self.log('Loss /val', loss, prog_bar=True, sync_dist=True)
 

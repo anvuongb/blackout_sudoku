@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader, Dataset
 
 from scipy.special import expit, logit
 from scipy.optimize import bisect
-
+import pandas as pd
 
 import torch
 
@@ -42,12 +42,34 @@ class BaseDataset(Dataset):
         self.dist = hparams['time_dist']
 
         if train:
-            self.data_dir = os.path.join(hparams['data_dir'], 'train') 
-            self.num_ims = 180000
+            self.data_csv = os.path.join(hparams['data_dir'], 'train.csv') 
+            pdf = pd.read_csv(self.data_csv, names=['data','solve'])
+            self.data = pdf.values
+            self.num_ims = len(pdf)
         else:
-            self.data_dir = os.path.join(hparams['data_dir'], 'test') 
-            self.num_ims = 18000
-        self.size = 270
+            self.data_csv = os.path.join(hparams['data_dir'], 'test.csv') 
+            pdf = pd.read_csv(self.data_csv, names=['data','solve'])
+            self.data = pdf.values
+            self.num_ims = len(pdf)
+        self.size = 288
+
+        # mnist digits for image construction
+        import collections
+        if train:
+            self.mnist_len = 5000
+            mnist_path = os.path.join(hparams['mnist_dir'], 'training')
+        else:
+            self.mnist_len = 800
+            mnist_path = os.path.join(hparams['mnist_dir'], 'testing')
+        classes = np.arange(10)
+        self.mnist_dict = collections.defaultdict(list)
+
+        for c in classes:
+            cpath = os.path.join(mnist_path, str(c))
+            im_paths = os.listdir(cpath)
+            im_paths = [os.path.join(cpath, p) for p in im_paths if p.endswith('.png')]
+            for p in im_paths:
+                self.mnist_dict[c].append(cv2.imread(p)[:,:,0])
 
     def __len__(self):
         return self.num_ims
@@ -66,6 +88,11 @@ class BaseDataset(Dataset):
 class BlackoutSudokuDataset(BaseDataset):
     def __init__(self, train, hparams):
         super().__init__(train, hparams)
+    
+    def make_border(self, im, size, val=255):
+        imb = np.ones((size,size))*val
+        imb[2:30, 2:30] = im
+        return imb
 
     def __getitem__(self, idx, tk=None):
         if not tk:
@@ -73,10 +100,26 @@ class BlackoutSudokuDataset(BaseDataset):
             tk = self.sample_tk(dist=self.dist)
         tp = self.observationTimes[tk]
         
-        im_path = f'{idx}.png'
-        im_label_path = f'{idx}_label.png'
-        xT = cv2.imread(os.path.join(self.data_dir, im_path))[:,:,0]
-        x0 = cv2.imread(os.path.join(self.data_dir, im_label_path))[:,:,0]
+        rand_indices = np.random.randint(0, self.mnist_len, 81) # draw from mnist digit
+        size = 32 # make the final image to have size 288x288 -> works with 4 layers Unet
+        xT = np.zeros((size*9, size*9))
+        x0 = np.zeros((size*9, size*9))
+        mask = np.zeros((size*9, size*9))
+        d, l = self.data[idx]
+        for r in range(9):
+            for c in range(9):
+                digitd = int(d[c+9*r])
+                mnist_digitd = self.make_border(self.mnist_dict[digitd][rand_indices[c+9*r]].copy(), size)
+                digitl = int(l[c+9*r])
+                mnist_digitl = self.make_border(self.mnist_dict[digitl][rand_indices[c+9*r]].copy(), size)
+
+                if digitd == 0:
+                    mnist_digitd = self.make_border(np.zeros((28,28)), size)
+                    mask[r*size:(r+1)*size, c*size:(c+1)*size] = self.make_border(np.ones((28,28)), size, 0)
+                xT[r*size:(r+1)*size, c*size:(c+1)*size] = mnist_digitd
+                x0[r*size:(r+1)*size, c*size:(c+1)*size] = mnist_digitl
+        x0 = x0.astype(int)
+        xT = xT.astype(int)
 
         # sample pixels
         probs = 1-np.exp(-tp)
@@ -93,4 +136,4 @@ class BlackoutSudokuDataset(BaseDataset):
             xt = xt.astype(np.float64) - mean_v # normalize as in blackout
         wk = self.weights[tk-1]
 
-        return torch.from_numpy(xt).float(), torch.from_numpy(rates).float(), tk, wk
+        return torch.from_numpy(xt).float(), torch.from_numpy(rates).float(), tk, wk, torch.from_numpy(mask)

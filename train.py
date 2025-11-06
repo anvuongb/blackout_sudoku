@@ -24,6 +24,7 @@ if __name__ == '__main__':
     parser.add_argument('--wandb', type=int, default=0, help='if 1, use wandb logger')
     parser.add_argument('--gpu', type=int, default=-1, help='GPU index to use')
     parser.add_argument('--data_dir', type=str, help='path to data dir', required=True)
+    parser.add_argument('--mnist_dir', type=str, help='path to mnist dir', required=True)
     parser.add_argument('--load_from', type=str, default='null', required=False)
     parser.add_argument('--num_epochs', type=int, default=20)
     parser.add_argument('--num_iters', type=int, default=-1, help="if not -1, will ignore num_epochs, only applicable when lightning=1")
